@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from dash import Dash, dcc, html
 from dash.dependencies import Input, Output
 import classes
@@ -6,10 +7,14 @@ from dash import Dash, dash_table
 import pandas as pd
 import numpy as np
 from collections import OrderedDict
+from pythonping import ping
 
 # DB Connection Parameters
 dbPara = classes.dbCredentials()
 
+def pingdef(ip):
+    response_list = ping(ip,count=10)
+    return response_list.rtt_avg_ms
     # Connect to DB
 connectr = mysql.connector.connect(user = dbPara.dbUsername, password = dbPara.dbPassword, host = dbPara.dbServerIp , database = dbPara.dataTable)
     # Connection must be buffered when executing multiple querys on DB before closing connection.
@@ -19,8 +24,14 @@ queryRaw = pointer.fetchall()
     # Transform the query payload into a dataframe
 queryPayload = np.array(queryRaw)
 df = pd.DataFrame(queryPayload, columns=['idagents', 'ubicacion', 'ip', 'weburl', 'sshurl', 'agentname','connection'])
+df['Latency'] = df['ip'].apply(lambda x:pingdef(x))
+df['Rating'] = df['ip'].apply(lambda x:
+    '⭐⭐⭐' if pingdef(x) < 5 else (
+    '⭐⭐' if pingdef(x) < 10 else (
+    '⭐' if pingdef(x) < 30 else ''
+)))
 
-
+   
 
 
 app = Dash(__name__, title='SIFI Control Panel')
@@ -62,16 +73,28 @@ def render_content(tab):
         ])
     elif tab == 'tab-2':
         return html.Div([
-            html.H3( 
+            html.H3( ), 
 
-                        dash_table.DataTable(
+                      dash_table.DataTable(
                         #columns = [{'name': i, 'id': i} ],
 
                         columns=[{"name": i, "id": i, 'type': "text", 'presentation':'markdown'} for i in df.columns ],
                        # columns=[{"name": [["weburl"]], "id": "weburl", 'type': "", 'presentation':'markdown'}],
                         data = df.to_dict('records'),
                         
-                        ) )  
+                        
+                        style_data_conditional=[
+                             {
+                                'if': {
+                                 'filter_query': '{Connection} == 'UP'',
+                                     'column_id': 'Connection'
+                                         },
+                                    'color': 'tomato',
+                                        'fontWeight': 'bold'
+                                },
+                        ]
+                        )
+                         
         ])
     elif tab == 'tab-3':
         return html.Div([
