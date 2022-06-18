@@ -1,12 +1,27 @@
 from dash import Dash, dcc, html
 from dash.dependencies import Input, Output
 import classes
+import mysql.connector
 from dash import Dash, dash_table
 import pandas as pd
+import numpy as np
 from collections import OrderedDict
 
 # DB Connection Parameters
 dbPara = classes.dbCredentials()
+
+    # Connect to DB
+connectr = mysql.connector.connect(user = dbPara.dbUsername, password = dbPara.dbPassword, host = dbPara.dbServerIp , database = dbPara.dataTable)
+    # Connection must be buffered when executing multiple querys on DB before closing connection.
+pointer = connectr.cursor(buffered=True)
+pointer.execute('SELECT * FROM agents;')
+queryRaw = pointer.fetchall()
+    # Transform the query payload into a dataframe
+queryPayload = np.array(queryRaw)
+df = pd.DataFrame(queryPayload, columns=['idagents', 'ubicacion', 'ip', 'weburl', 'sshurl', 'agentname','connection'])
+
+
+
 
 app = Dash(__name__, title='SIFI Control Panel')
 
@@ -37,6 +52,7 @@ app.layout = html.Div([
     html.Div(id='tabs-content-inline')
 ])
 
+
 @app.callback(Output('tabs-content-inline', 'children'),
               Input('tabs-styled-with-inline', 'value'))
 def render_content(tab):
@@ -46,7 +62,16 @@ def render_content(tab):
         ])
     elif tab == 'tab-2':
         return html.Div([
-            html.H3(  datatableDEV()        )
+            html.H3( 
+
+                        dash_table.DataTable(
+                        #columns = [{'name': i, 'id': i} ],
+
+                        columns=[{"name": i, "id": i, 'type': "text", 'presentation':'markdown'} for i in df.columns ],
+                       # columns=[{"name": [["weburl"]], "id": "weburl", 'type': "", 'presentation':'markdown'}],
+                        data = df.to_dict('records'),
+                        
+                        ) )  
         ])
     elif tab == 'tab-3':
         return html.Div([
@@ -61,30 +86,10 @@ def render_content(tab):
             html.H3('Tab content 5')
         ])
 
-def datatableDEV():
- # Connect to DB
-    connectr = mysql.connector.connect(user = dbPara.dbUsername, password = dbPara.dbPassword, host = dbPara.dbServerIp , database = dbPara.dataTable)
-    # Connection must be buffered when executing multiple querys on DB before closing connection.
-    pointer = connectr.cursor(buffered=True)
-    pointer.execute('SELECT * FROM agents;')
-    queryRaw = pointer.fetchall()
-    # Transform the query payload into a dataframe
-    df = pd.DataFrame(queryRaw)
-
-    dash_table.DataTable(
-    data=df.to_dict('records'),
-    columns=[
-        {"ubicacion": i, "ip": i} for i in df.columns
-    ],
-    )
 
 
 
 
-
-
-    queryRaw.clear()
-    # Set Graph background colores & title font size
 
 
 
