@@ -61,14 +61,16 @@ def toSSH():
     data_wifi_csv = "wifi_net" + DATE
     #command = "sudo timeout 20s airodump-ng wlan1mon -w /home/kali/Reports/wifi_networks/"+data_wifi_csv+" --wps --output-format csv --write-interval 5 > /home/kali/Reports/wifi_networks/wifi_last.csv"
     #command = "ls"
-    command = "sudo timeout 10s wash -i wlan0mon -s -u -2 -5 -a -p >> /home/kali/Reports/wifi_networks/basic.wifi.csv | cat /home/kali/Reports/wifi_networks/basic.wifi.csv"
+    command = "sudo wash -i wlan0mon -s -u -2 -5 -a -p >> /home/kali/Reports/wifi_networks/basic.wifi.csv | cat /home/kali/Reports/wifi_networks/basic.wifi.csv"
     #command = "sudo iwlist wlan0 scan | grep ESSID"
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(host, port, username, password)
-    ssh.exec_command(command)
-   # stdin, stdout, stderr = ssh.exec_command(command)
-    #lines = stdout.readlines()
+    #ssh.exec_command(command)
+    stdin, stdout, stderr = ssh.exec_command(command)
+    lines = stdout.readlines()
+    #lines = ""
+    return lines
 
 def UpdateSSIDTable():
             
@@ -184,9 +186,9 @@ def render_content(tab):
         ])
     elif tab == 'tab-3':
         return html.Div([ 
-            html.H3( 
-                       
- dash_table.DataTable(
+            html.H4(   toSSH() ),
+            html.H4(        
+                dash_table.DataTable(
                         #columns = [{'name': i, 'id': i} ],
 
                         #columns=[{"name": i, "id": i, 'type': "text", 'presentation':'markdown'} for i in  read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").columns ],
@@ -200,10 +202,11 @@ def render_content(tab):
                             'backgroundColor': 'rgb(50, 50, 50)',
                             'color': 'white'
                         },            
-            )
+                            )
+                )
 
-
-            ), 
+        
+            
 
             
             
