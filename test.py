@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-from dash import Dash, dcc, html
+import time as datetime 
+from datetime import date
+import os
+from click import command
+from dash import Dash, dcc, html, callback_context, State
 from dash.dependencies import Input, Output
 import classes
 import mysql.connector
@@ -8,16 +12,93 @@ import pandas as pd
 import numpy as np
 from collections import OrderedDict
 from pythonping import ping
+import paramiko
+from scapy.all import *
+from threading import Thread
 
-# DB Connection Parameters
+
 dbPara = classes.dbCredentials()
+
+def read_csv_sftp(hostname: str, username: str, remotepath: str, password: str, *args, **kwargs) -> pd.DataFrame:
+    """
+    Read a file from a remote host using SFTP over SSH.
+    Args:
+        hostname: the remote host to read the file from
+        username: the username to login to the remote host with
+        remotepath: the path of the remote file to read
+        *args: positional arguments to pass to pd.read_csv
+        **kwargs: keyword arguments to pass to pd.read_csv
+    Returns:
+        a pandas DataFrame with data loaded from the remote host
+    """
+    # open an SSH connection
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(hostname, username=username, password=password)
+    command = "sudo timeout 10s wash -i wlan0mon -s -u -2 -5 -a -p >> /home/kali/Reports/wifi_networks/basic.wifi.csv | cat /home/kali/Reports/wifi_networks/basic.wifi.csv"
+    client.exec_command(command)
+    # read the file using SFTP
+    sftp = client.open_sftp()
+    remote_file = sftp.open(remotepath)
+    dataframe = pd.read_csv(remote_file, *args, **kwargs)
+    remote_file.close()
+    # close the connections
+    sftp.close()
+    client.close()
+    return dataframe
+
+
+
+
+
+
+def toSSH():
+    host = "100.64.0.2"
+    port = 22
+    username = "kali"
+    password = "kali"
+    DATE = date.today().strftime('%Y-%m-%d-%H_%M')
+    data_wifi_csv = "wifi_net" + DATE
+    #command = "sudo timeout 20s airodump-ng wlan1mon -w /home/kali/Reports/wifi_networks/"+data_wifi_csv+" --wps --output-format csv --write-interval 5 > /home/kali/Reports/wifi_networks/wifi_last.csv"
+    #command = "ls"
+    command = "sudo timeout 10s wash -i wlan0mon -s -u -2 -5 -a -p >> /home/kali/Reports/wifi_networks/basic.wifi.csv | cat /home/kali/Reports/wifi_networks/basic.wifi.csv"
+    #command = "sudo iwlist wlan0 scan | grep ESSID"
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(host, port, username, password)
+    ssh.exec_command(command)
+   # stdin, stdout, stderr = ssh.exec_command(command)
+    #lines = stdout.readlines()
+
+def UpdateSSIDTable():
+            
+            dash_table.DataTable(
+                        #columns = [{'name': i, 'id': i} ],
+
+                        #columns=[{"name": i, "id": i, 'type': "text", 'presentation':'markdown'} for i in  read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").columns ],
+                       # columns=[{"name": [["weburl"]], "id": "weburl", 'type': "", 'presentation':'markdown'}],
+                    data = read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").to_dict('records'), style_cell={'textAlign': 'left'},
+                        style_header={
+                            'backgroundColor': 'rgb(30, 30, 30)',
+                            'color': 'white'
+                        },
+                        style_data={
+                            'backgroundColor': 'rgb(50, 50, 50)',
+                            'color': 'white'
+                        },            
+            )
+
+
+
+
 
 def pingdef(ip):
     response_list = ping(ip,count=10)
     return response_list.rtt_avg_ms
     # Connect to DB
+   
 connectr = mysql.connector.connect(user = dbPara.dbUsername, password = dbPara.dbPassword, host = dbPara.dbServerIp , database = dbPara.dataTable)
-    # Connection must be buffered when executing multiple querys on DB before closing connection.
+# Connection must be buffered when executing multiple querys on DB before closing connection.
 pointer = connectr.cursor(buffered=True)
 pointer.execute('SELECT * FROM agents;')
 queryRaw = pointer.fetchall()
@@ -30,7 +111,6 @@ df['Rating'] = df['ip'].apply(lambda x:
     '⭐⭐' if pingdef(x) < 10 else (
     '⭐' if pingdef(x) < 30 else ''
 )))
-
    
 
 
@@ -60,12 +140,15 @@ app.layout = html.Div([
         dcc.Tab(label='Wireless Assessment', value='tab-4', style=tab_style, selected_style=tab_selected_style),
         dcc.Tab(label='Wifi Dashboard', value='tab-5', style=tab_style, selected_style=tab_selected_style)
     ], style=tabs_styles),
-    html.Div(id='tabs-content-inline')
+    html.Div(id='tabs-content-inline'),  html.Div(id='container-button-timestamp')
 ])
 
 
 @app.callback(Output('tabs-content-inline', 'children'),
-              Input('tabs-styled-with-inline', 'value'))
+               
+              Input('tabs-styled-with-inline', 'value')
+)
+
 def render_content(tab):
     if tab == 'tab-1':
         return html.Div([
@@ -73,8 +156,11 @@ def render_content(tab):
         ])
     elif tab == 'tab-2':
         return html.Div([
-            html.H3( ), 
 
+        
+            html.H3( ),  
+                    
+   
                       dash_table.DataTable(
                         #columns = [{'name': i, 'id': i} ],
 
@@ -86,7 +172,7 @@ def render_content(tab):
                         style_data_conditional=[
                              {
                                 'if': {
-                                 'filter_query': '{Connection} == 'UP'',
+                                 'filter_query': '{Connection} == "UP"',
                                      'column_id': 'Connection'
                                          },
                                     'color': 'tomato',
@@ -97,8 +183,30 @@ def render_content(tab):
                          
         ])
     elif tab == 'tab-3':
-        return html.Div([
-            html.H3('Tab content 3')
+        return html.Div([ 
+            html.H3( 
+                       
+ dash_table.DataTable(
+                        #columns = [{'name': i, 'id': i} ],
+
+                        #columns=[{"name": i, "id": i, 'type': "text", 'presentation':'markdown'} for i in  read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").columns ],
+                       # columns=[{"name": [["weburl"]], "id": "weburl", 'type': "", 'presentation':'markdown'}],
+                    data = read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").to_dict('records'), style_cell={'textAlign': 'left'},
+                        style_header={
+                            'backgroundColor': 'rgb(30, 30, 30)',
+                            'color': 'white'
+                        },
+                        style_data={
+                            'backgroundColor': 'rgb(50, 50, 50)',
+                            'color': 'white'
+                        },            
+            )
+
+
+            ), 
+
+            
+            
         ])
     elif tab == 'tab-4':
         return html.Div([
