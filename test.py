@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from re import X
 import time as datetime 
 from datetime import date
 import os
@@ -35,8 +36,8 @@ def read_csv_sftp(hostname: str, username: str, remotepath: str, password: str, 
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(hostname, username=username, password=password)
-    command = "sudo timeout 10s wash -i wlan0mon -s -u -2 -5 -a -p >> /home/kali/Reports/wifi_networks/basic.wifi.csv | cat /home/kali/Reports/wifi_networks/basic.wifi.csv"
-    client.exec_command(command)
+    #command = "sudo timeout 10s wash -i wlan2mon -s -u -2 -5 -a -p > /home/kali/Reports/wifi_networks/basic.wifi.csv && cat /home/kali/Reports/wifi_networks/basic.wifi.csv"
+    #client.exec_command(command)
     # read the file using SFTP
     sftp = client.open_sftp()
     remote_file = sftp.open(remotepath)
@@ -61,7 +62,7 @@ def toSSH():
     data_wifi_csv = "wifi_net" + DATE
     #command = "sudo timeout 20s airodump-ng wlan1mon -w /home/kali/Reports/wifi_networks/"+data_wifi_csv+" --wps --output-format csv --write-interval 5 > /home/kali/Reports/wifi_networks/wifi_last.csv"
     #command = "ls"
-    command = "sudo wash -i wlan0mon -s -u -2 -5 -a -p >> /home/kali/Reports/wifi_networks/basic.wifi.csv | cat /home/kali/Reports/wifi_networks/basic.wifi.csv"
+    command = "sudo timeout 10s wash -i wlan2mon -s -u -2 -5 -a -p > /home/kali/Reports/wifi_networks/basic.wifi.csv && cat /home/kali/Reports/wifi_networks/basic.wifi.csv"
     #command = "sudo iwlist wlan0 scan | grep ESSID"
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -91,11 +92,20 @@ def UpdateSSIDTable():
             )
 
 
-
+def check_ping(ip):
+    response = os.system("ping -n 2 " + ip)
+    # and then check the response...
+    if response == 0:
+        pingstatus = True
+    else:
+        pingstatus = False
+    
+    return pingstatus
 
 
 def pingdef(ip):
     response_list = ping(ip,count=10)
+
     return response_list.rtt_avg_ms
     # Connect to DB
    
@@ -107,12 +117,22 @@ queryRaw = pointer.fetchall()
     # Transform the query payload into a dataframe
 queryPayload = np.array(queryRaw)
 df = pd.DataFrame(queryPayload, columns=['idagents', 'ubicacion', 'ip', 'weburl', 'sshurl', 'agentname','connection'])
-df['Latency'] = df['ip'].apply(lambda x:pingdef(x))
-df['Rating'] = df['ip'].apply(lambda x:
-    '⭐⭐⭐' if pingdef(x) < 5 else (
-    '⭐⭐' if pingdef(x) < 10 else (
-    '⭐' if pingdef(x) < 30 else ''
-)))
+df['connection'] = df['ip'].apply(lambda x:
+        'DOWN' if check_ping(x) == False else( 'UP' 
+        
+                            ))
+
+df['Latency'] = df['ip'].apply(lambda x:pingdef(x)
+     if check_ping(x) == True else ('0'))
+
+
+df['Rating'] = df['ip'].apply ( lambda x:
+            '⭐⭐⭐' if check_ping(x) == True and pingdef(x) < 15 else (
+            '⭐⭐' if check_ping(x) == True and pingdef(x) <= 30 else (
+            '⭐' if check_ping(x) == True and pingdef(x) > 30 else '🔥not reliable'
+              )))
+
+
    
 
 
