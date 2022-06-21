@@ -51,8 +51,6 @@ def read_csv_sftp(hostname: str, username: str, remotepath: str, password: str, 
 
 
 
-
-
 def toSSH():
     host = "100.64.0.2"
     port = 22
@@ -63,6 +61,26 @@ def toSSH():
     #command = "sudo timeout 20s airodump-ng wlan1mon -w /home/kali/Reports/wifi_networks/"+data_wifi_csv+" --wps --output-format csv --write-interval 5 > /home/kali/Reports/wifi_networks/wifi_last.csv"
     #command = "ls"
     command = "sudo timeout 10s wash -i wlan2mon -s -u -2 -5 -a -p > /home/kali/Reports/wifi_networks/basic.wifi.csv && cat /home/kali/Reports/wifi_networks/basic.wifi.csv"
+    #command = "sudo iwlist wlan0 scan | grep ESSID"
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(host, port, username, password)
+    #ssh.exec_command(command)
+    stdin, stdout, stderr = ssh.exec_command(command)
+    lines = stdout.readlines()
+    #lines = ""
+    return 
+    
+def toSSH2():
+    host = "100.64.0.2"
+    port = 22
+    username = "kali"
+    password = "kali"
+    DATE = date.today().strftime('%Y-%m-%d-%H_%M')
+    data_wifi_csv = "wifi_net" + DATE
+    command = "sudo rm -rf /home/kali/Reports/wifi_networks/wifi_last-01.csv | sudo timeout 10s airodump-ng wlan2mon -w /home/kali/Reports/wifi_networks/wifi_last --wps --output-format csv && cat /home/kali/Reports/wifi_networks/wifi_last-01.csv"
+    #command = "ls"
+    #command = "sudo timeout 10s wash -i wlan2mon -s -u -2 -5 -a -p > /home/kali/Reports/wifi_networks/basic.wifi.csv && cat /home/kali/Reports/wifi_networks/basic.wifi.csv"
     #command = "sudo iwlist wlan0 scan | grep ESSID"
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -117,23 +135,22 @@ queryRaw = pointer.fetchall()
     # Transform the query payload into a dataframe
 queryPayload = np.array(queryRaw)
 df = pd.DataFrame(queryPayload, columns=['idagents', 'ubicacion', 'ip', 'weburl', 'sshurl', 'agentname','connection'])
+#Define Up or DOW in DataTaFrame
+
 df['connection'] = df['ip'].apply(lambda x:
         'DOWN' if check_ping(x) == False else( 'UP' 
         
                             ))
-
+#Add Latency Column to DataFrame
 df['Latency'] = df['ip'].apply(lambda x:pingdef(x)
      if check_ping(x) == True else ('0'))
 
-
+#Rating de la conexions de los Sifi AGENTS desde el server.
 df['Rating'] = df['ip'].apply ( lambda x:
             '⭐⭐⭐' if check_ping(x) == True and pingdef(x) < 15 else (
-            '⭐⭐' if check_ping(x) == True and pingdef(x) <= 30 else (
-            '⭐' if check_ping(x) == True and pingdef(x) > 30 else '🔥not reliable'
+            '⭐⭐' if check_ping(x) == True and pingdef(x) < 30 else (
+            '⭐' if check_ping(x) == True and pingdef(x) < 40  else '🔥not reliable'
               )))
-
-
-   
 
 
 app = Dash(__name__, title='SIFI Control Panel')
@@ -223,13 +240,7 @@ def render_content(tab):
                             'color': 'white'
                         },            
                             )
-                )
-
-        
-            
-
-            
-            
+                )    
         ])
     elif tab == 'tab-4':
         return html.Div([
@@ -237,14 +248,26 @@ def render_content(tab):
         ])
     elif tab == 'tab-5':
         return html.Div([
-            html.H3('Tab content 5')
+          #  html.H3(toSSH2),
+            html.H4(        
+                dash_table.DataTable(
+                        #columns = [{'name': i, 'id': i} ],
+
+                        #columns=[{"name": i, "id": i, 'type': "text", 'presentation':'markdown'} for i in  read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").columns ],
+                       # columns=[{"name": [["weburl"]], "id": "weburl", 'type': "", 'presentation':'markdown'}],
+                    data = read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/wifi_last-01-mod.csv", "kali").to_dict('records'),
+                        style_header={
+                          'backgroundColor': 'rgb(30, 30, 30)',
+                            'color': 'green'
+                        },
+                        style_data={
+                            'backgroundColor': 'rgb(50, 50, 50)',
+                            'color': 'green'
+                        },            
+                            )
+                )
+
         ])
-
-
-
-
-
-
 
 
 if __name__ == '__main__':
