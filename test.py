@@ -13,6 +13,7 @@ import pandas as pd
 import numpy as np
 from collections import OrderedDict
 from pythonping import ping
+import paramiko
 
 # DB Connection Parameters
 dbPara = classes.dbCredentials()
@@ -58,7 +59,7 @@ def toSSH():
     #command = "sudo timeout 20s airodump-ng wlan1mon -w /home/kali/Reports/wifi_networks/"+data_wifi_csv+" --wps --output-format csv --write-interval 5 > /home/kali/Reports/wifi_networks/wifi_last.csv"
     #command = "ls"
 
-    interfaceValue = 'wlan0mon'
+    interfaceValue = 'wlan2mon'
     command = "sudo timeout 10s wash -i " + interfaceValue + " -s -u -2 -5 -a -p > /home/kali/Reports/wifi_networks/basic.wifi.csv && cat /home/kali/Reports/wifi_networks/basic.wifi.csv"
     #command = "sudo iwlist wlan0 scan | grep ESSID"
     ssh = paramiko.SSHClient()
@@ -77,7 +78,7 @@ def toSSH2():
     password = "kali"
     DATE = date.today().strftime('%Y-%m-%d-%H_%M')
     data_wifi_csv = "wifi_net" + DATE
-    command = "sudo rm -rf /home/kali/Reports/wifi_networks/wifi_last-01.csv | sudo timeout 10s airodump-ng wlan0mon -w /home/kali/Reports/wifi_networks/wifi_last --wps --output-format csv && cat /home/kali/Reports/wifi_networks/wifi_last-01.csv"
+    command = "sudo rm -rf /home/kali/Reports/wifi_networks/wifi_last-01.csv | sudo timeout 10s airodump-ng wlan2mon -w /home/kali/Reports/wifi_networks/wifi_last --wps --output-format csv && cat /home/kali/Reports/wifi_networks/wifi_last-01.csv"
     #command = "ls"
     #command = "sudo timeout 10s wash -i wlan2mon -s -u -2 -5 -a -p > /home/kali/Reports/wifi_networks/basic.wifi.csv && cat /home/kali/Reports/wifi_networks/basic.wifi.csv"
     #command = "sudo iwlist wlan0 scan | grep ESSID"
@@ -260,7 +261,7 @@ def render_content(tab, callbackContext):
         ])
     elif tab == 'tab-5':
         return html.Div([
-          #  html.H3(toSSH2),
+           html.H3(toSSH2),
             html.H4(        
                 dash_table.DataTable(
                         #columns = [{'name': i, 'id': i} ],
