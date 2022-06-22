@@ -36,7 +36,7 @@ def read_csv_sftp(hostname: str, username: str, remotepath: str, password: str, 
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(hostname, username=username, password=password)
-    #command = "sudo timeout 10s wash -i wlan2mon -s -u -2 -5 -a -p > /home/kali/Reports/wifi_networks/basic.wifi.csv && cat /home/kali/Reports/wifi_networks/basic.wifi.csv"
+    #command = "sudo timeout 10s wash -i wlan0mon -s -u -2 -5 -a -p > /home/kali/Reports/wifi_networks/basic.wifi.csv && cat /home/kali/Reports/wifi_networks/basic.wifi.csv"
     #client.exec_command(command)
     # read the file using SFTP
     sftp = client.open_sftp()
@@ -60,7 +60,9 @@ def toSSH():
     data_wifi_csv = "wifi_net" + DATE
     #command = "sudo timeout 20s airodump-ng wlan1mon -w /home/kali/Reports/wifi_networks/"+data_wifi_csv+" --wps --output-format csv --write-interval 5 > /home/kali/Reports/wifi_networks/wifi_last.csv"
     #command = "ls"
-    command = "sudo timeout 10s wash -i wlan2mon -s -u -2 -5 -a -p > /home/kali/Reports/wifi_networks/basic.wifi.csv && cat /home/kali/Reports/wifi_networks/basic.wifi.csv"
+
+    interfaceValue = 'wlan0mon'
+    command = "sudo timeout 10s wash -i " + interfaceValue + " -s -u -2 -5 -a -p > /home/kali/Reports/wifi_networks/basic.wifi.csv && cat /home/kali/Reports/wifi_networks/basic.wifi.csv"
     #command = "sudo iwlist wlan0 scan | grep ESSID"
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -78,7 +80,7 @@ def toSSH2():
     password = "kali"
     DATE = date.today().strftime('%Y-%m-%d-%H_%M')
     data_wifi_csv = "wifi_net" + DATE
-    command = "sudo rm -rf /home/kali/Reports/wifi_networks/wifi_last-01.csv | sudo timeout 10s airodump-ng wlan2mon -w /home/kali/Reports/wifi_networks/wifi_last --wps --output-format csv && cat /home/kali/Reports/wifi_networks/wifi_last-01.csv"
+    command = "sudo rm -rf /home/kali/Reports/wifi_networks/wifi_last-01.csv | sudo timeout 10s airodump-ng wlan0mon -w /home/kali/Reports/wifi_networks/wifi_last --wps --output-format csv && cat /home/kali/Reports/wifi_networks/wifi_last-01.csv"
     #command = "ls"
     #command = "sudo timeout 10s wash -i wlan2mon -s -u -2 -5 -a -p > /home/kali/Reports/wifi_networks/basic.wifi.csv && cat /home/kali/Reports/wifi_networks/basic.wifi.csv"
     #command = "sudo iwlist wlan0 scan | grep ESSID"
@@ -111,7 +113,7 @@ def UpdateSSIDTable():
 
 
 def check_ping(ip):
-    response = os.system("ping -n 2 " + ip)
+    response = os.system("ping -n 1 " + ip)
     # and then check the response...
     if response == 0:
         pingstatus = True
@@ -146,11 +148,14 @@ df['Latency'] = df['ip'].apply(lambda x:pingdef(x)
      if check_ping(x) == True else ('0'))
 
 #Rating de la conexions de los Sifi AGENTS desde el server.
-df['Rating'] = df['ip'].apply ( lambda x:
-            '⭐⭐⭐' if check_ping(x) == True and pingdef(x) < 15 else (
-            '⭐⭐' if check_ping(x) == True and pingdef(x) < 30 else (
-            '⭐' if check_ping(x) == True and pingdef(x) < 40  else '🔥not reliable'
+if check_ping("100.64.0.2") == True and check_ping("100.64.0.4") == True: 
+    df['Rating'] = df['ip'].apply ( lambda x:
+            '⭐⭐⭐' if pingdef(x) < 15 else (
+            '⭐⭐' if pingdef(x) < 30 else (
+            '⭐' if  pingdef(x) < 60  else '🔥not reliable'
               )))
+
+    
 
 
 app = Dash(__name__, title='SIFI Control Panel')
@@ -179,16 +184,31 @@ app.layout = html.Div([
         dcc.Tab(label='Wireless Assessment', value='tab-4', style=tab_style, selected_style=tab_selected_style),
         dcc.Tab(label='Wifi Dashboard', value='tab-5', style=tab_style, selected_style=tab_selected_style)
     ], style=tabs_styles),
-    html.Div(id='tabs-content-inline'),  html.Div(id='container-button-timestamp')
+    html.Div(id='tabs-content-inline'),  html.Div(id='container-button-timestamp'),
+    html.Button('Submit', id = 'submitButton', n_clicks = 0),
+    dcc.Interval(
+        id='dataUpateInterval', 
+        interval=5*1000, 
+        n_intervals=0
+    )
 ])
 
 
-@app.callback(Output('tabs-content-inline', 'children'),
-               
-              Input('tabs-styled-with-inline', 'value')
+@app.callback(
+    Output('tabs-content-inline', 'children'), 
+    [
+        Input('tabs-styled-with-inline', 'value'), 
+        Input('submitButton', 'n_clicks')
+    ]
 )
+def render_content(tab, callbackContext):
+    # Instantiate the callback context, to find the button ID that triggered the callback
+    callbackContext = callback_context
+    # Get button ID
+    button_id = callbackContext.triggered[0]['prop_id'].split('.')[0]
+    if button_id == 'submitButton':
+        pass
 
-def render_content(tab):
     if tab == 'tab-1':
         return html.Div([
             html.H3('Welcome to Sifi WSS')
@@ -255,7 +275,7 @@ def render_content(tab):
 
                         #columns=[{"name": i, "id": i, 'type': "text", 'presentation':'markdown'} for i in  read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").columns ],
                        # columns=[{"name": [["weburl"]], "id": "weburl", 'type': "", 'presentation':'markdown'}],
-                    data = read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/wifi_last-01-mod.csv", "kali").to_dict('records'),
+                    data = read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/wifi_last-01-mod.csv", "kali").to_dict('records'), style_cell={'textAlign': 'left'},
                         style_header={
                           'backgroundColor': 'rgb(30, 30, 30)',
                             'color': 'green'
