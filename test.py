@@ -49,17 +49,17 @@ def read_csv_sftp(hostname: str, username: str, remotepath: str, password: str, 
 
 
 
-def toSSH():
-    host = "100.64.0.2"
+def toSSH(host: str, password: str):
+    host = host
     port = 22
     username = "kali"
-    password = "kali"
+    password = password
     DATE = date.today().strftime('%Y-%m-%d-%H_%M')
     data_wifi_csv = "wifi_net" + DATE
     #command = "sudo timeout 20s airodump-ng wlan1mon -w /home/kali/Reports/wifi_networks/"+data_wifi_csv+" --wps --output-format csv --write-interval 5 > /home/kali/Reports/wifi_networks/wifi_last.csv"
     #command = "ls"
 
-    interfaceValue = 'wlan2mon'
+    interfaceValue = 'wlan0mon'
     command = "sudo timeout 10s wash -i " + interfaceValue + " -s -u -2 -5 -a -p > /home/kali/Reports/wifi_networks/basic.wifi.csv && cat /home/kali/Reports/wifi_networks/basic.wifi.csv"
     #command = "sudo iwlist wlan0 scan | grep ESSID"
     ssh = paramiko.SSHClient()
@@ -71,14 +71,14 @@ def toSSH():
     #lines = ""
     return 
     
-def toSSH2():
-    host = "100.64.0.2"
+def toSSH2(host):
+    host = host
     port = 22
     username = "kali"
     password = "kali"
     DATE = date.today().strftime('%Y-%m-%d-%H_%M')
     data_wifi_csv = "wifi_net" + DATE
-    command = "sudo rm -rf /home/kali/Reports/wifi_networks/wifi_last-01.csv | sudo timeout 10s airodump-ng wlan2mon -w /home/kali/Reports/wifi_networks/wifi_last --wps --output-format csv && cat /home/kali/Reports/wifi_networks/wifi_last-01.csv"
+    command = "sudo rm -rf /home/kali/Reports/wifi_networks/wifi_last-01.csv | sudo timeout 10s airodump-ng wlan1mon -w /home/kali/Reports/wifi_networks/wifi_last --wps --output-format csv && cat /home/kali/Reports/wifi_networks/wifi_last-01.csv"
     #command = "ls"
     #command = "sudo timeout 10s wash -i wlan2mon -s -u -2 -5 -a -p > /home/kali/Reports/wifi_networks/basic.wifi.csv && cat /home/kali/Reports/wifi_networks/basic.wifi.csv"
     #command = "sudo iwlist wlan0 scan | grep ESSID"
@@ -91,23 +91,23 @@ def toSSH2():
     #lines = ""
     return lines
 
-def UpdateSSIDTable():
+#def UpdateSSIDTable():
             
-            dash_table.DataTable(
+          #  dash_table.DataTable(
                         #columns = [{'name': i, 'id': i} ],
 
                         #columns=[{"name": i, "id": i, 'type': "text", 'presentation':'markdown'} for i in  read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").columns ],
                        # columns=[{"name": [["weburl"]], "id": "weburl", 'type': "", 'presentation':'markdown'}],
-                    data = read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").to_dict('records'), style_cell={'textAlign': 'left'},
-                        style_header={
-                            'backgroundColor': 'rgb(30, 30, 30)',
-                            'color': 'white'
-                        },
-                        style_data={
-                            'backgroundColor': 'rgb(50, 50, 50)',
-                            'color': 'white'
-                        },            
-            )
+           #         data = read_csv_sftp("100.64.0.77", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").to_dict('records'), style_cell={'textAlign': 'left'},
+            #            style_header={
+             #               'backgroundColor': 'rgb(30, 30, 30)',
+              #              'color': 'white'
+               #         },
+                #        style_data={
+                 #           'backgroundColor': 'rgb(50, 50, 50)',
+                  #          'color': 'white'
+                 #       },            
+            #)
 
 
 def check_ping(ip):
@@ -135,22 +135,45 @@ queryRaw = pointer.fetchall()
 queryPayload = np.array(queryRaw)
 df = pd.DataFrame(queryPayload, columns=['idagents', 'ubicacion', 'ip', 'weburl', 'sshurl', 'agentname','connection'])
 #Define Up or DOW in DataTaFrame
-
-df['connection'] = df['ip'].apply(lambda x:
+def LatencyRating():
+    df['connection'] = df['ip'].apply(lambda x:
         'DOWN' if check_ping(x) == False else( 'UP' 
         
                             ))
-#Add Latency Column to DataFrame
-df['Latency'] = df['ip'].apply(lambda x:pingdef(x)
-     if check_ping(x) == True else ('0'))
+    #Add Latency Column to DataFrame
+    df['Latency'] = df['ip'].apply(lambda x:pingdef(x)
+         if check_ping(x) == True else ('0'))
 
-#Rating de la conexions de los Sifi AGENTS desde el server.
-if check_ping("100.64.0.2") == True and check_ping("100.64.0.4") == True: 
-    df['Rating'] = df['ip'].apply ( lambda x:
+    #Rating de la conexions de los Sifi AGENTS desde el server.
+    if check_ping("100.64.0.2") == True and check_ping("100.64.0.4") and check_ping("100.64.0.77")  == True: 
+        df['Rating'] = df['ip'].apply ( lambda x:
             '⭐⭐⭐' if pingdef(x) < 15 else (
             '⭐⭐' if pingdef(x) < 30 else (
             '⭐' if  pingdef(x) < 60  else '🔥not reliable'
               )))
+
+def SSIDDataTable():
+    return html.Div([ html.H3('Sifi Agent 64.2: SSID list'),
+            html.H4(        
+                dash_table.DataTable(
+                        #columns = [{'name': i, 'id': i} ],
+
+                        #columns=[{"name": i, "id": i, 'type': "text", 'presentation':'markdown'} for i in  read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").columns ],
+                       # columns=[{"name": [["weburl"]], "id": "weburl", 'type': "", 'presentation':'markdown'}],
+                    data = read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").to_dict('records'), style_cell={'textAlign': 'left'},           
+                            )            
+                ), html.H3('Sifi Agent 64.4: SSID list'),
+            html.H4(   
+                    dash_table.DataTable(
+                        #columns = [{'name': i, 'id': i} ],
+
+                        #columns=[{"name": i, "id": i, 'type': "text", 'presentation':'markdown'} for i in  read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").columns ],
+                       # columns=[{"name": [["weburl"]], "id": "weburl", 'type': "", 'presentation':'markdown'}],
+                    data = read_csv_sftp("100.64.0.4", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "sifi2224").to_dict('records'), style_cell={'textAlign': 'left'},     
+                        )
+                        
+)
+        ])
 
     
 
@@ -182,7 +205,7 @@ app.layout = html.Div([
         dcc.Tab(label='Wifi Dashboard', value='tab-5', style=tab_style, selected_style=tab_selected_style)
     ], style=tabs_styles),
     html.Div(id='tabs-content-inline'),  html.Div(id='container-button-timestamp'),
-    html.Button('Submit', id = 'submitButton', n_clicks = 0),
+    html.Button('RefreshData', id = 'submitButton', n_clicks = 0),
     dcc.Interval(
         id='dataUpateInterval', 
         interval=5*1000, 
@@ -203,8 +226,39 @@ def render_content(tab, callbackContext):
     callbackContext = callback_context
     # Get button ID
     button_id = callbackContext.triggered[0]['prop_id'].split('.')[0]
-    if button_id == 'submitButton':
-        pass
+    if button_id == 'submitButton'and tab == 'tab-3':
+        if check_ping("100.64.0.2") == True:
+            toSSH("100.64.0.2", "kali")
+        if check_ping("100.64.0.4") == True:
+            toSSH("100.64.0.4", "sifi2224")
+        if check_ping("100.64.0.77") == True:
+            toSSH("100.64.0.77", "kali")
+       # SSIDDataTable()
+        return html.Div([ html.H3('Sifi Agent 64.2: SSID list'),
+            html.H4(        
+                dash_table.DataTable(
+                        #columns = [{'name': i, 'id': i} ],
+
+                        #columns=[{"name": i, "id": i, 'type': "text", 'presentation':'markdown'} for i in  read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").columns ],
+                       # columns=[{"name": [["weburl"]], "id": "weburl", 'type': "", 'presentation':'markdown'}],
+                    data = read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").to_dict('records'), style_cell={'textAlign': 'left'},           
+                            )            
+                ), html.H3('Sifi Agent 64.4: SSID list'),
+            html.H4(   
+                    dash_table.DataTable(
+                        #columns = [{'name': i, 'id': i} ],
+
+                        #columns=[{"name": i, "id": i, 'type': "text", 'presentation':'markdown'} for i in  read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").columns ],
+                       # columns=[{"name": [["weburl"]], "id": "weburl", 'type': "", 'presentation':'markdown'}],
+                    data = read_csv_sftp("100.64.0.4", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "sifi2224").to_dict('records'), style_cell={'textAlign': 'left'},     
+                        )
+                        
+)
+        ])
+    if button_id == 'submitButton' and tab == 'tab-2':
+        LatencyRating()
+
+   
 
     if tab == 'tab-1':
         return html.Div([
@@ -236,16 +290,16 @@ def render_content(tab, callbackContext):
         ])
     elif tab == 'tab-3':
         return html.Div([ 
-            html.H4(   toSSH() ),
-            html.H4(        
+            html.H4( "Here you can Discover SSID's with your SifiAgents"),
+              html.H4(        
                 dash_table.DataTable(
                         #columns = [{'name': i, 'id': i} ],
 
                         #columns=[{"name": i, "id": i, 'type': "text", 'presentation':'markdown'} for i in  read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").columns ],
                        # columns=[{"name": [["weburl"]], "id": "weburl", 'type': "", 'presentation':'markdown'}],
-                    data = read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").to_dict('records'), style_cell={'textAlign': 'left'},
+                    data = read_csv_sftp("100.64.0.1", "ittadmin", "/home/ittadmin/Reports/basic.wifi.csv", "L1br0Sh@rkR1ng").to_dict('records'), style_cell={'textAlign': 'left'},
                         style_header={
-                            'backgroundColor': 'rgb(30, 30, 30)',
+                          'backgroundColor': 'rgb(30, 30, 30)',
                             'color': 'white'
                         },
                         style_data={
@@ -276,7 +330,7 @@ def render_content(tab, callbackContext):
                         style_data={
                             'backgroundColor': 'rgb(50, 50, 50)',
                             'color': 'green'
-                        },            
+                        }          
                             )
                 )
 
