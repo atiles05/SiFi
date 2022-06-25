@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from multiprocessing import Value
 from re import X
 import time as datetime 
 from datetime import date
@@ -226,31 +227,30 @@ app.layout = html.Div([
     Output('pandas-output-container-1', 'children'),
     Input('pandas-dropdown-1', 'value')
 )
-def update_output(value):
+def update_output( value):
     return f'You have selected {value}'
-
+    
 @app.callback( 
     Output('tabs-content-inline', 'children'), 
     [
         Input('tabs-styled-with-inline', 'value'), 
         Input('submitButton', 'n_clicks'),
-        
-    ]
+         Input('pandas-dropdown-1', 'value') ]
 )
-def render_content(tab, callbackContext):
+def render_content(tab, callbackContext,DropDownDevvalue):
     # Instantiate the callback context, to find the button ID that triggered the callback
     callbackContext = callback_context
     # Get button ID
     button_id = callbackContext.triggered[0]['prop_id'].split('.')[0]
     if button_id == 'submitButton'and tab == 'tab-3':
-        if check_ping("100.64.0.2") == True:
-            toSSH("100.64.0.2", "kali", "wlan1mon")
+     #   if check_ping("100.64.0.2") == True:
+        toSSH("100.64.0.2", "kali", "wlan1mon")
           
-        if check_ping("100.64.0.4") == True:
-            toSSH("100.64.0.4", "sifi2224", "wlan0mon")
+      #  if check_ping("100.64.0.4") == True:
+        toSSH("100.64.0.4", "sifi2224", "wlan0mon")
             
-        if check_ping("100.64.0.77") == True:
-            toSSH("100.64.0.77", "kali", "wlan1mon")
+       # if check_ping("100.64.0.77") == True:
+        #    toSSH("100.64.0.77", "kali", "wlan1mon")
            
        # SSIDDataTable()
         return html.Div([ html.H3('Sifi Agent 64.2: SSID list'),
@@ -276,8 +276,9 @@ def render_content(tab, callbackContext):
     if button_id == 'submitButton' and tab == 'tab-2':
         LatencyRating()
     if button_id == 'submitButton' and tab == 'tab-5':
-        toSSH2("100.64.0.2", "wlan1mon")
-        return html.Div([
+        if DropDownDevvalue == "10.64.0.4":
+            toSSH2("100.64.0.4", "wlan0mon")
+            return html.Div([
           # html.H3(toSSH2)
             html.H4(        
                 dash_table.DataTable(
@@ -285,7 +286,8 @@ def render_content(tab, callbackContext):
 
                         #columns=[{"name": i, "id": i, 'type': "text", 'presentation':'markdown'} for i in  read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").columns ],
                        # columns=[{"name": [["weburl"]], "id": "weburl", 'type': "", 'presentation':'markdown'}],
-                    data = read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/wifi_last-01.csv", "kali").to_dict('records'), style_cell={'textAlign': 'left'},
+                            
+                                data = read_csv_sftp("100.64.0.4", "kali", "/home/kali/Reports/wifi_networks/wifi_last-01.csv", "sifi2224").to_dict('records'), style_cell={'textAlign': 'left'},
                         style_header={
                           'backgroundColor': 'rgb(30, 30, 30)',
                             'color': 'green'
@@ -297,7 +299,31 @@ def render_content(tab, callbackContext):
                             )
                 )
 
-        ])
+                    ])
+        elif DropDownDevvalue =="100.64.0.2":
+            toSSH2("100.64.0.2", "wlan1mon")
+            return html.Div([
+          # html.H3(toSSH2)
+            html.H4(        
+                dash_table.DataTable(
+                        #columns = [{'name': i, 'id': i} ],
+
+                        #columns=[{"name": i, "id": i, 'type': "text", 'presentation':'markdown'} for i in  read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").columns ],
+                       # columns=[{"name": [["weburl"]], "id": "weburl", 'type': "", 'presentation':'markdown'}],
+                            
+                                data = read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/wifi_last-01.csv", "kali").to_dict('records'), style_cell={'textAlign': 'left'},
+                        style_header={
+                          'backgroundColor': 'rgb(30, 30, 30)',
+                            'color': 'green'
+                        },
+                        style_data={
+                            'backgroundColor': 'rgb(50, 50, 50)',
+                            'color': 'green'
+                        }          
+                            )
+                )
+
+                    ])
         
         
        
@@ -355,7 +381,11 @@ def render_content(tab, callbackContext):
                 )    
         ])
     elif tab == 'tab-4':
-        dfra = read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/wifi_last-01.csv", "kali")
+        if DropDownDevvalue == "100.64.0.2":
+            passwordDev = "kali"
+        else:
+            passwordDev = "sifi2224"
+        dfra = read_csv_sftp(DropDownDevvalue, "kali", "/home/kali/Reports/wifi_networks/wifi_last-01.csv", passwordDev)
         #dfra=[{"name": "BSSID", "id": i, } for i in dfra.columns ],
         dfra2 = dfra.iloc[:, 0]
         dfra3 = dfra.iloc[:, 13]
@@ -366,6 +396,10 @@ def render_content(tab, callbackContext):
            # dcc.Dropdown(read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/wifi_last-01.csv", "kali").BSSID.unique())
         ])
     elif tab == 'tab-5':
+        if DropDownDevvalue == "100.64.0.2":
+            passwordDev = "kali"
+        else:
+            passwordDev = "sifi2224"
         return html.Div([
           # html.H3(toSSH2)
             html.H4(        
@@ -374,7 +408,7 @@ def render_content(tab, callbackContext):
 
                         #columns=[{"name": i, "id": i, 'type': "text", 'presentation':'markdown'} for i in  read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/basic.wifi.csv", "kali").columns ],
                        # columns=[{"name": [["weburl"]], "id": "weburl", 'type': "", 'presentation':'markdown'}],
-                    data = read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/wifi_last-01.csv", "kali").to_dict('records'), style_cell={'textAlign': 'left'},
+                    data = read_csv_sftp( DropDownDevvalue, "kali", "/home/kali/Reports/wifi_networks/wifi_last-01.csv", passwordDev).to_dict('records'), style_cell={'textAlign': 'left'},
                         style_header={
                           'backgroundColor': 'rgb(30, 30, 30)',
                             'color': 'green'
