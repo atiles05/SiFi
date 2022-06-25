@@ -357,10 +357,12 @@ def render_content(tab, callbackContext):
     elif tab == 'tab-4':
         dfra = read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/wifi_last-01.csv", "kali")
         #dfra=[{"name": "BSSID", "id": i, } for i in dfra.columns ],
-        dfra = dfra['BSSID'].apply(lambda x:x)
+        dfra2 = dfra.iloc[:, 0]
+        dfra3 = dfra.iloc[:, 13]
         return html.Div([
             html.H3('Select Your Target ESSID and BSSID'),
-            dcc.Dropdown(dfra),
+            dcc.Dropdown(dfra2),
+            dcc.Dropdown(dfra3),
            # dcc.Dropdown(read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/wifi_last-01.csv", "kali").BSSID.unique())
         ])
     elif tab == 'tab-5':
