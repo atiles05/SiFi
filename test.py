@@ -214,13 +214,20 @@ app.layout = html.Div([
     ], style=tabs_styles),
     html.Div(id='tabs-content-inline'),  html.Div(id='container-button-timestamp'),
     html.Button('RefreshData', id = 'submitButton', n_clicks = 0),
+    dcc.Dropdown(df.ip.unique(), id='pandas-dropdown-1'),
+    html.Div(id='pandas-output-container-1'),
     dcc.Interval(
         id='dataUpateInterval', 
         interval=5*1000, 
         n_intervals=0
     ), dbc.Alert(id='tbl_out')
 ])
-
+@app.callback(
+    Output('pandas-output-container-1', 'children'),
+    Input('pandas-dropdown-1', 'value')
+)
+def update_output(value):
+    return f'You have selected {value}'
 
 @app.callback( 
     Output('tabs-content-inline', 'children'), 
@@ -348,8 +355,13 @@ def render_content(tab, callbackContext):
                 )    
         ])
     elif tab == 'tab-4':
+        dfra = read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/wifi_last-01.csv", "kali")
+        #dfra=[{"name": "BSSID", "id": i, } for i in dfra.columns ],
+        dfra = dfra['BSSID'].apply(lambda x:x)
         return html.Div([
-            html.H3('Tab content 4')
+            html.H3('Select Your Target ESSID and BSSID'),
+            dcc.Dropdown(dfra),
+           # dcc.Dropdown(read_csv_sftp("100.64.0.2", "kali", "/home/kali/Reports/wifi_networks/wifi_last-01.csv", "kali").BSSID.unique())
         ])
     elif tab == 'tab-5':
         return html.Div([
